@@ -70,6 +70,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             id: reportId,
             success: true,
+            report: report,
+            urls: urls,
+            created_at: new Date().toISOString(),
         })
     } catch (error) {
         const duration = Date.now() - startTime

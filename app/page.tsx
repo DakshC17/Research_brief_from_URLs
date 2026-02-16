@@ -31,6 +31,15 @@ export default function Home() {
                 return
             }
 
+            // Store report in localStorage for serverless compatibility
+            if (data.report) {
+                localStorage.setItem(`report_${data.id}`, JSON.stringify({
+                    report: data.report,
+                    urls: data.urls,
+                    created_at: data.created_at
+                }))
+            }
+
             // Redirect to result page
             router.push(`/result/${data.id}`)
         } catch (err) {

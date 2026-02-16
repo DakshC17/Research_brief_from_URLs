@@ -1,20 +1,84 @@
-import { notFound } from 'next/navigation'
-import { getReport } from '@/lib/db'
+'use client'
 
-export default function ResultPage({ params }: { params: { id: string } }) {
-    const reportId = parseInt(params.id)
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 
-    if (isNaN(reportId)) {
-        notFound()
+interface ResearchBrief {
+    summary: string
+    key_points: Array<{
+        point: string
+        sources: number[]
+        snippet: string
+    }>
+    conflicting_claims: Array<{
+        claim: string
+        sources: number[]
+    }>
+    verification_checklist: string[]
+    sources_used: Array<{
+        id: number
+        url: string
+        what_used: string
+    }>
+}
+
+interface SavedReport {
+    report: ResearchBrief
+    urls: string[]
+    created_at: string
+}
+
+export default function ResultPage() {
+    const params = useParams()
+    const reportId = params.id as string
+    const [savedReport, setSavedReport] = useState<SavedReport | null>(null)
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        // Try to load from localStorage first (for serverless compatibility)
+        const stored = localStorage.getItem(`report_${reportId}`)
+        if (stored) {
+            setSavedReport(JSON.parse(stored))
+            setLoading(false)
+        } else {
+            // Fallback: try to fetch from server (won't work in serverless but kept for completeness)
+            setLoading(false)
+        }
+    }, [reportId])
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 py-12 px-4">
+                <div className="max-w-2xl mx-auto text-center">
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        )
     }
-
-    const savedReport = getReport(reportId)
 
     if (!savedReport) {
-        notFound()
+        return (
+            <div className="min-h-screen bg-gray-50 py-12 px-4">
+                <div className="max-w-2xl mx-auto">
+                    <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Report Not Found</h1>
+                        <p className="text-gray-600 mb-6">
+                            This report is no longer available. Due to serverless architecture,
+                            reports are stored temporarily in your browser.
+                        </p>
+                        <a
+                            href="/"
+                            className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                        >
+                            Generate New Brief
+                        </a>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
-    const { report, urls, created_at } = savedReport
+    const { report, created_at } = savedReport
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4">
