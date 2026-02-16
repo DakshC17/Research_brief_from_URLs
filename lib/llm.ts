@@ -101,7 +101,26 @@ Generate a comprehensive research brief following the JSON structure specified i
                     topP: 0.95,
                     topK: 40,
                     maxOutputTokens: 8192,
+                    responseMimeType: 'application/json', // Force JSON response
                 },
+                safetySettings: [
+                    {
+                        category: 'HARM_CATEGORY_HARASSMENT',
+                        threshold: 'BLOCK_NONE'
+                    },
+                    {
+                        category: 'HARM_CATEGORY_HATE_SPEECH',
+                        threshold: 'BLOCK_NONE'
+                    },
+                    {
+                        category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                        threshold: 'BLOCK_NONE'
+                    },
+                    {
+                        category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                        threshold: 'BLOCK_NONE'
+                    }
+                ]
             }),
         }
     );
