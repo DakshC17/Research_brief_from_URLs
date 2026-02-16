@@ -3,9 +3,11 @@ import path from 'path';
 import fs from 'fs';
 import { ResearchBrief, SavedReport } from '@/types/report';
 
-const DB_PATH = process.env.DATABASE_PATH || './data/research.db';
+// Use /tmp directory for Vercel serverless environment
+// Note: Data will be ephemeral and reset between deployments
+const DB_PATH = process.env.DATABASE_PATH || '/tmp/research.db';
 
-// Ensure data directory exists
+// Ensure directory exists
 const dbDir = path.dirname(DB_PATH);
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });

@@ -215,6 +215,11 @@ Check system health
 - Delete `data/reports.db` and restart the app
 - Check file permissions on the `data/` directory
 
+### Vercel Deployment Note
+- The app uses SQLite which stores data in `/tmp` directory on Vercel
+- **Data is ephemeral** - history will reset between deployments
+- For production use, consider migrating to Vercel Postgres, Supabase, or PlanetScale
+
 ---
 
 ## License
