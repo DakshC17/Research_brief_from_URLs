@@ -7,27 +7,36 @@ import { ResearchBrief, SavedReport } from '@/types/report';
 // Note: Data will be ephemeral and reset between deployments
 const DB_PATH = process.env.DATABASE_PATH || '/tmp/research.db';
 
-// Ensure directory exists
-const dbDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+let db: Database.Database | null = null;
+
+// Lazy initialization of database
+function getDb(): Database.Database {
+    if (!db) {
+        // Ensure directory exists
+        const dbDir = path.dirname(DB_PATH);
+        if (!fs.existsSync(dbDir)) {
+            fs.mkdirSync(dbDir, { recursive: true });
+        }
+
+        // Initialize database
+        db = new Database(DB_PATH);
+
+        // Create table if not exists
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            urls TEXT NOT NULL,
+            report TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+    }
+    return db;
 }
 
-// Initialize database
-const db = new Database(DB_PATH);
-
-// Create table if not exists
-db.exec(`
-  CREATE TABLE IF NOT EXISTS reports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    urls TEXT NOT NULL,
-    report TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
-
 export function saveReport(urls: string[], report: ResearchBrief): number {
-    const stmt = db.prepare(
+    const database = getDb();
+    const stmt = database.prepare(
         'INSERT INTO reports (urls, report) VALUES (?, ?)'
     );
     const result = stmt.run(JSON.stringify(urls), JSON.stringify(report));
@@ -35,7 +44,8 @@ export function saveReport(urls: string[], report: ResearchBrief): number {
 }
 
 export function getReport(id: number): SavedReport | null {
-    const stmt = db.prepare(
+    const database = getDb();
+    const stmt = database.prepare(
         'SELECT id, urls, report, created_at FROM reports WHERE id = ?'
     );
     const row = stmt.get(id) as any;
@@ -51,7 +61,8 @@ export function getReport(id: number): SavedReport | null {
 }
 
 export function getRecentReports(limit: number = 5): SavedReport[] {
-    const stmt = db.prepare(
+    const database = getDb();
+    const stmt = database.prepare(
         'SELECT id, urls, report, created_at FROM reports ORDER BY created_at DESC LIMIT ?'
     );
     const rows = stmt.all(limit) as any[];
@@ -66,11 +77,12 @@ export function getRecentReports(limit: number = 5): SavedReport[] {
 
 export function checkDatabaseConnection(): boolean {
     try {
-        db.prepare('SELECT 1').get();
+        const database = getDb();
+        database.prepare('SELECT 1').get();
         return true;
     } catch (error) {
         return false;
     }
 }
 
-export default db;
+export default getDb;
