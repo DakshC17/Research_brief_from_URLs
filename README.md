@@ -14,6 +14,26 @@ A web application that generates structured research briefs from multiple URLs. 
 
 ---
 
+## OUTPUTS
+
+### Home Page
+![Home Page](outputs/O1.png)
+*Enter 1-10 URLs to generate a research brief*
+
+### Generated Research Brief
+![Research Brief](outputs/O2.png)
+*Comprehensive analysis with summary, key points, and citations*
+
+### System Status
+![System Status](outputs/O3.png)
+*Monitor backend, database, and LLM connectivity*
+
+### History Page
+![History Page](outputs/O4.png)
+*View your recent research briefs*
+
+---
+
 ## Quick Start
 
 ### Prerequisites
