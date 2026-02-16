@@ -1,6 +1,9 @@
 import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
+import { createLogger } from './logger';
+
+const logger = createLogger('lib:fetchReadable');
 
 export interface ExtractedContent {
     url: string;
@@ -14,6 +17,9 @@ export interface ExtractedContent {
 const MAX_CONTENT_LENGTH = 8000; // Limit content to avoid token overflow
 
 export async function fetchReadableContent(url: string): Promise<ExtractedContent> {
+    const startTime = Date.now();
+    logger.debug({ url }, 'Fetching URL');
+
     try {
         // Fetch the HTML with browser-like headers
         const response = await fetch(url, {
@@ -25,10 +31,11 @@ export async function fetchReadableContent(url: string): Promise<ExtractedConten
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
             },
-            timeout: 15000, // 15 second timeout
         });
 
         if (!response.ok) {
+            const duration = Date.now() - startTime;
+            logger.warn({ url, status: response.status, duration }, 'HTTP error fetching URL');
             return {
                 url,
                 title: '',
@@ -50,6 +57,8 @@ export async function fetchReadableContent(url: string): Promise<ExtractedConten
         const article = reader.parse();
 
         if (!article || !article.textContent) {
+            const duration = Date.now() - startTime;
+            logger.warn({ url, duration }, 'Failed to extract readable content');
             return {
                 url,
                 title: '',
@@ -66,6 +75,9 @@ export async function fetchReadableContent(url: string): Promise<ExtractedConten
             .trim()
             .substring(0, MAX_CONTENT_LENGTH);
 
+        const duration = Date.now() - startTime;
+        logger.info({ url, title: article.title, contentLength: cleanContent.length, duration }, 'Content extracted successfully');
+
         return {
             url,
             title: article.title || 'Untitled',
@@ -74,6 +86,8 @@ export async function fetchReadableContent(url: string): Promise<ExtractedConten
             success: true,
         };
     } catch (error) {
+        const duration = Date.now() - startTime;
+        logger.error({ url, error: error instanceof Error ? error.message : 'Unknown error', duration }, 'Exception during content fetch');
         return {
             url,
             title: '',
