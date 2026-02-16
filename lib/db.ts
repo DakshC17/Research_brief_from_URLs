@@ -1,88 +1,42 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
+// In-memory storage for Vercel deployment
+// Note: Data will be lost between serverless function invocations
+// For production, use Vercel KV, Postgres, or Supabase
+
 import { ResearchBrief, SavedReport } from '@/types/report';
 
-// Use /tmp directory for Vercel serverless environment
-// Note: Data will be ephemeral and reset between deployments
-const DB_PATH = process.env.DATABASE_PATH || '/tmp/research.db';
-
-let db: Database.Database | null = null;
-
-// Lazy initialization of database
-function getDb(): Database.Database {
-    if (!db) {
-        // Ensure directory exists
-        const dbDir = path.dirname(DB_PATH);
-        if (!fs.existsSync(dbDir)) {
-            fs.mkdirSync(dbDir, { recursive: true });
-        }
-
-        // Initialize database
-        db = new Database(DB_PATH);
-
-        // Create table if not exists
-        db.exec(`
-          CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            urls TEXT NOT NULL,
-            report TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-    }
-    return db;
-}
+// In-memory storage
+let reports: SavedReport[] = [];
+let nextId = 1;
 
 export function saveReport(urls: string[], report: ResearchBrief): number {
-    const database = getDb();
-    const stmt = database.prepare(
-        'INSERT INTO reports (urls, report) VALUES (?, ?)'
-    );
-    const result = stmt.run(JSON.stringify(urls), JSON.stringify(report));
-    return result.lastInsertRowid as number;
+    const id = nextId++;
+    const savedReport: SavedReport = {
+        id,
+        urls,
+        report,
+        created_at: new Date().toISOString(),
+    };
+    reports.unshift(savedReport); // Add to beginning
+
+    // Keep only last 10 reports to prevent memory issues
+    if (reports.length > 10) {
+        reports = reports.slice(0, 10);
+    }
+
+    return id;
 }
 
 export function getReport(id: number): SavedReport | null {
-    const database = getDb();
-    const stmt = database.prepare(
-        'SELECT id, urls, report, created_at FROM reports WHERE id = ?'
-    );
-    const row = stmt.get(id) as any;
-
-    if (!row) return null;
-
-    return {
-        id: row.id,
-        urls: JSON.parse(row.urls),
-        report: JSON.parse(row.report),
-        created_at: row.created_at,
-    };
+    return reports.find(r => r.id === id) || null;
 }
 
 export function getRecentReports(limit: number = 5): SavedReport[] {
-    const database = getDb();
-    const stmt = database.prepare(
-        'SELECT id, urls, report, created_at FROM reports ORDER BY created_at DESC LIMIT ?'
-    );
-    const rows = stmt.all(limit) as any[];
-
-    return rows.map(row => ({
-        id: row.id,
-        urls: JSON.parse(row.urls),
-        report: JSON.parse(row.report),
-        created_at: row.created_at,
-    }));
+    return reports.slice(0, Math.min(limit, reports.length));
 }
 
 export function checkDatabaseConnection(): boolean {
-    try {
-        const database = getDb();
-        database.prepare('SELECT 1').get();
-        return true;
-    } catch (error) {
-        return false;
-    }
+    // Always return true for in-memory storage
+    return true;
 }
 
-export default getDb;
+export default { saveReport, getReport, getRecentReports, checkDatabaseConnection };

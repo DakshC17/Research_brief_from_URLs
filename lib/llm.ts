@@ -128,11 +128,19 @@ Generate a comprehensive research brief following the JSON structure specified i
     try {
         // Remove markdown code blocks if present
         let jsonText = content.trim();
+
+        // Handle various markdown formats
         if (jsonText.startsWith('```json')) {
-            jsonText = jsonText.replace(/^```json\n/, '').replace(/\n```$/, '');
+            jsonText = jsonText.replace(/^```json\s*\n?/, '').replace(/\n?```\s*$/, '');
         } else if (jsonText.startsWith('```')) {
-            jsonText = jsonText.replace(/^```\n/, '').replace(/\n```$/, '');
+            jsonText = jsonText.replace(/^```\s*\n?/, '').replace(/\n?```\s*$/, '');
         }
+
+        // Remove any leading/trailing whitespace
+        jsonText = jsonText.trim();
+
+        // Log first 200 chars for debugging
+        logger.debug({ preview: jsonText.substring(0, 200) }, 'Attempting to parse JSON');
 
         const brief: ResearchBrief = JSON.parse(jsonText);
         const duration = Date.now() - startTime;
@@ -140,8 +148,13 @@ Generate a comprehensive research brief following the JSON structure specified i
         return brief;
     } catch (error) {
         const duration = Date.now() - startTime;
-        logger.error({ error: error instanceof Error ? error.message : 'Unknown error', duration }, 'Failed to parse Gemini response');
-        throw new Error('Failed to parse Gemini response as JSON');
+        // Log more details for debugging
+        logger.error({
+            error: error instanceof Error ? error.message : 'Unknown error',
+            contentPreview: content.substring(0, 500),
+            duration
+        }, 'Failed to parse Gemini response');
+        throw new Error(`Failed to parse Gemini response as JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

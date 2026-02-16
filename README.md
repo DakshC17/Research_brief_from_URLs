@@ -135,10 +135,12 @@ Research_brief_from_Links/
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **Database**: SQLite (better-sqlite3)
+- **Storage**: In-memory (for Vercel serverless compatibility)
 - **LLM**: Google Gemini 2.5 Flash
 - **Content Extraction**: Mozilla Readability + JSDOM
 - **HTTP Client**: node-fetch
+
+> **Note**: The app uses in-memory storage for Vercel deployment. History is preserved within the same serverless function instance but will reset on cold starts. For production, consider using Vercel KV, Postgres, or Supabase.
 
 ---
 
@@ -211,14 +213,10 @@ Check system health
 - Verify you have API quota remaining
 - Ensure you're using a valid model name
 
-### Database errors
-- Delete `data/reports.db` and restart the app
-- Check file permissions on the `data/` directory
-
-### Vercel Deployment Note
-- The app uses SQLite which stores data in `/tmp` directory on Vercel
-- **Data is ephemeral** - history will reset between deployments
-- For production use, consider migrating to Vercel Postgres, Supabase, or PlanetScale
+### Vercel Deployment
+- The app uses in-memory storage which resets on cold starts
+- History will be preserved within active sessions
+- For persistent storage, consider Vercel KV or Postgres
 
 ---
 
