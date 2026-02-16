@@ -6,28 +6,37 @@ import { SavedReport } from '@/types/report'
 export default function HistoryPage() {
     const [reports, setReports] = useState<SavedReport[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState('')
 
     useEffect(() => {
-        async function fetchHistory() {
-            try {
-                const response = await fetch('/api/history')
-                const data = await response.json()
+        // Load all reports from localStorage
+        const loadedReports: SavedReport[] = []
 
-                if (!response.ok) {
-                    setError(data.error || 'Failed to fetch history')
-                    return
+        // Iterate through localStorage to find all report_* keys
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && key.startsWith('report_')) {
+                try {
+                    const data = localStorage.getItem(key)
+                    if (data) {
+                        const parsed = JSON.parse(data)
+                        const id = parseInt(key.replace('report_', ''))
+                        loadedReports.push({
+                            id,
+                            ...parsed
+                        })
+                    }
+                } catch (err) {
+                    console.error('Failed to parse report:', key, err)
                 }
-
-                setReports(data.reports)
-            } catch (err) {
-                setError('Failed to load history')
-            } finally {
-                setLoading(false)
             }
         }
 
-        fetchHistory()
+        // Sort by ID descending (most recent first)
+        loadedReports.sort((a, b) => b.id - a.id)
+
+        // Keep only last 5
+        setReports(loadedReports.slice(0, 5))
+        setLoading(false)
     }, [])
 
     return (
@@ -51,19 +60,21 @@ export default function HistoryPage() {
                         <p className="text-gray-600">Loading history...</p>
                     )}
 
-                    {error && (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-800">{error}</p>
+                    {!loading && reports.length === 0 && (
+                        <div className="text-center py-8">
+                            <p className="text-gray-600 mb-4">
+                                No research briefs generated yet.
+                            </p>
+                            <a
+                                href="/"
+                                className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                            >
+                                Generate Your First Brief
+                            </a>
                         </div>
                     )}
 
-                    {!loading && !error && reports.length === 0 && (
-                        <p className="text-gray-600">
-                            No research briefs generated yet.
-                        </p>
-                    )}
-
-                    {!loading && !error && reports.length > 0 && (
+                    {!loading && reports.length > 0 && (
                         <div className="space-y-6">
                             {reports.map((report) => (
                                 <div
