@@ -1,5 +1,8 @@
 import { ResearchBrief } from '@/types/report';
 import { ExtractedContent } from './fetchReadable';
+import { createLogger } from './logger';
+
+const logger = createLogger('lib:llm');
 
 const API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
@@ -44,9 +47,14 @@ Your output MUST be a valid JSON object with this exact structure:
 export async function generateResearchBrief(
     extractedContents: ExtractedContent[]
 ): Promise<ResearchBrief> {
+    const startTime = Date.now();
+
     if (!API_KEY) {
+        logger.error({}, 'GEMINI_API_KEY not configured');
         throw new Error('GEMINI_API_KEY is not configured');
     }
+
+    logger.info({ model: MODEL, sourceCount: extractedContents.length }, 'Starting LLM generation');
 
     // Filter successful extractions
     const validContents = extractedContents.filter(c => c.success);
@@ -99,7 +107,9 @@ Generate a comprehensive research brief following the JSON structure specified i
     );
 
     if (!response.ok) {
+        const duration = Date.now() - startTime;
         const errorText = await response.text();
+        logger.error({ status: response.status, error: errorText, duration }, 'Gemini API error');
         throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
@@ -107,8 +117,12 @@ Generate a comprehensive research brief following the JSON structure specified i
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!content) {
+        const duration = Date.now() - startTime;
+        logger.error({ duration }, 'No content returned from Gemini');
         throw new Error('No content returned from Gemini');
     }
+
+    logger.debug({ contentLength: content.length }, 'Received LLM response');
 
     // Parse and validate JSON
     try {
@@ -121,9 +135,12 @@ Generate a comprehensive research brief following the JSON structure specified i
         }
 
         const brief: ResearchBrief = JSON.parse(jsonText);
+        const duration = Date.now() - startTime;
+        logger.info({ duration, keyPointsCount: brief.key_points?.length || 0 }, 'Research brief generated successfully');
         return brief;
     } catch (error) {
-        console.error('Failed to parse Gemini response:', content);
+        const duration = Date.now() - startTime;
+        logger.error({ error: error instanceof Error ? error.message : 'Unknown error', duration }, 'Failed to parse Gemini response');
         throw new Error('Failed to parse Gemini response as JSON');
     }
 }
